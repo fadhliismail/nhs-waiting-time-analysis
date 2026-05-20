@@ -1,0 +1,22 @@
+# Data files
+data/raw/                          # raw XLS files — too large, download separately (see README)
+data/processed/nhs_ae.db           # SQLite DB — derived from CSVs, not needed for app
+
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+*.egg-info/
+dist/
+build/
+.env
+venv/
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Internal project files — not for public repo
+CLAUDE.md
+STUDY_NOTES.md
