@@ -35,7 +35,16 @@ The seasonal picture has shifted too. The traditional winter spike still exists,
 | matplotlib / seaborn | Exploratory visualisation |
 | SQLite | Structured querying |
 | Jupyter Notebook | Analysis environment |
-| Looker Studio | Interactive dashboard |
+| Plotly | Interactive HTML charts |
+| Streamlit | Dashboard app (deployed on Streamlit Community Cloud) |
+
+---
+
+## Live Dashboard
+
+The Streamlit dashboard is deployed and publicly accessible. No installation needed — open the link and explore the data directly in your browser.
+
+Five pages: About & Key Findings, National Overview, Trust Performance, Seasonal Patterns, Local Focus (Hinchingbrooke / North West Anglia NHS Trust).
 
 ---
 
@@ -64,6 +73,9 @@ source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
 python -m ipykernel install --user --name=nhs-venv --display-name="NHS Waiting Time"
+
+# Run the dashboard locally
+streamlit run app.py
 ```
 
 > **xlrd compatibility note:** There's a bug in xlrd 2.0.1 that affects the 2024-25 Q3 and Q4 files. After installing, patch one line in `.venv/lib/python3.x/site-packages/xlrd/book.py` at line 1472:
