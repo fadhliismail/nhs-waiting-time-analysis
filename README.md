@@ -94,6 +94,7 @@ streamlit run app.py
 ## Project Structure
 
 ```
+├── app.py                              # Streamlit dashboard
 ├── data/
 │   ├── raw/                            # Source XLS files (not in repo — download separately)
 │   │   ├── time_series/                # National monthly aggregate
@@ -101,8 +102,7 @@ streamlit run app.py
 │   └── processed/                      # Cleaned CSVs produced by notebooks
 ├── notebooks/                          # Jupyter notebooks (numbered — run in order)
 ├── outputs/
-│   ├── figures/                        # Chart exports (PNG)
-│   └── reports/                        # Written analysis
+│   └── figures/                        # Chart exports (PNG and interactive HTML)
 └── requirements.txt
 ```
 
