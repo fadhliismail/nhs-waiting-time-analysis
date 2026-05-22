@@ -28,6 +28,11 @@ page = st.sidebar.radio(
 )
 st.sidebar.markdown("---")
 st.sidebar.caption("Source: NHS England A&E Attendances and Emergency Admissions, April 2019 – April 2026")
+st.sidebar.markdown("---")
+st.sidebar.markdown(
+    "Built by **Fadhli Ismail**  \n"
+    "[GitHub](https://github.com/fadhliismail/nhs-waiting-time-analysis)"
+)
 
 
 # ── Page 0: About & Key Findings ─────────────────────────────────────────────

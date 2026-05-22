@@ -42,7 +42,9 @@ The seasonal picture has shifted too. The traditional winter spike still exists,
 
 ## Live Dashboard
 
-The Streamlit dashboard is deployed and publicly accessible. No installation needed — open the link and explore the data directly in your browser.
+**[View the dashboard](https://nhs-waiting-time-analysis-ftffjzfb52xgeqyn2mgc5d.streamlit.app/)**
+
+No installation needed — open the link and explore the data directly in your browser.
 
 Five pages: About & Key Findings, National Overview, Trust Performance, Seasonal Patterns, Local Focus (Hinchingbrooke / North West Anglia NHS Trust).
 
