@@ -20,7 +20,6 @@ def load_data():
 
 national, trust = load_data()
 
-# ── Sidebar ───────────────────────────────────────────────────────────────────
 st.sidebar.title("NHS A&E Dashboard")
 page = st.sidebar.radio(
     "",
@@ -35,7 +34,6 @@ st.sidebar.markdown(
 )
 
 
-# ── Page 0: About & Key Findings ─────────────────────────────────────────────
 if page == "About & Key Findings":
     st.title("NHS A&E Waiting Times — England 2019 to 2025")
     st.markdown(
@@ -138,7 +136,6 @@ if page == "About & Key Findings":
     )
 
 
-# ── Page 1: National Overview ─────────────────────────────────────────────────
 elif page == "National Overview":
     st.title("National Overview")
 
@@ -305,7 +302,6 @@ elif page == "National Overview":
     )
 
 
-# ── Page 2: Trust Performance ─────────────────────────────────────────────────
 elif page == "Trust Performance":
     st.title("Trust Performance")
 
@@ -341,7 +337,7 @@ elif page == "Trust Performance":
 
     st.markdown("---")
 
-    # League table — bottom 30
+    # league table, bottom 30
     league = (
         t.groupby(["code", "name"])["pct_4hr_type1_pct"]
         .mean().reset_index().dropna()
@@ -432,7 +428,7 @@ elif page == "Trust Performance":
 
     st.markdown("---")
 
-    # Performance band trend — stacked bar
+    # performance band trend
     st.markdown(
         "The chart below shows how that distribution has shifted **across all six years**. "
         "Each bar adds up to 100% of trusts. Watch the green (at target) shrink and the red (severe) grow."
@@ -474,7 +470,6 @@ elif page == "Trust Performance":
     )
 
 
-# ── Page 3: Seasonal Patterns ─────────────────────────────────────────────────
 elif page == "Seasonal Patterns":
     st.title("Seasonal Patterns")
 
@@ -581,7 +576,6 @@ elif page == "Seasonal Patterns":
         )
 
 
-# ── Page 4: Local Focus ───────────────────────────────────────────────────────
 elif page == "Local Focus":
     st.title("Local Focus — North West Anglia NHS FT")
 
