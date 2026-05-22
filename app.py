@@ -88,7 +88,7 @@ if page == "About & Key Findings":
         st.info(
             "**5. The seasonal crisis is now year-round**\n\n"
             "A&E has always been harder in winter. But the summer–winter performance gap has "
-            "narrowed from 7.8 percentage points to 2.6, and not because winters got better. "
+            "narrowed from 7.8 percentage points to 4.3, and not because winters got better. "
             "Summer performance collapsed to near-winter levels. "
             "The system is under pressure every month of the year now."
         )
@@ -479,7 +479,7 @@ elif page == "Seasonal Patterns":
         episodes all arriving at once. A seasonal dip is expected and well-documented.
 
         But the data shows something more troubling: **the summer recovery is disappearing**. The gap
-        between the best and worst months has narrowed from 7.8 percentage points to 2.6, and not because
+        between the best and worst months has narrowed from 7.8 percentage points to 4.3, and not because
         winters got better. Summer performance collapsed towards winter levels.
         The system is now under pressure year-round, not just in the cold months.
 
