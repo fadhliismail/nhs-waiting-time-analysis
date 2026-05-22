@@ -2,7 +2,7 @@
 
 An end-to-end analysis of NHS England Accident and Emergency performance data across six financial years: the pre-COVID baseline, the pandemic period, and the recovery that didn't really materialise.
 
-The analysis looks at national trends, trust-level variation across roughly 124 major A&E departments, seasonal demand and performance patterns, and the local picture for the Cambridgeshire and Peterborough Integrated Care Board area.
+The analysis looks at national trends, trust-level variation across roughly 135 major A&E departments, seasonal demand and performance patterns, and the local picture for the Cambridgeshire and Peterborough Integrated Care Board area.
 
 ---
 
@@ -18,12 +18,12 @@ The seasonal picture has shifted too. The traditional winter spike still exists,
 
 ## Key Findings
 
-- **Demand recovered; performance didn't.** Type 1 A&E attendances are 6% above pre-pandemic levels by 2024-25. The 4-hour standard has fallen from 75% to 59% over the same period — a divergence that rules out rising demand as the primary explanation.
+- **Demand recovered; performance didn't.** Type 1 A&E attendances are 6% above pre-pandemic levels by 2024-25. The 4-hour standard has fallen from 75% to 59% over the same period, a divergence that rules out rising demand as the primary explanation.
 - **The worst single year was 2021-22: −15.3 percentage points** on Type 1 performance, as post-lockdown attendance rebounded faster than NHS capacity could respond.
 - **In 2024-25, not one Type 1 trust in England met the 95% target.** 95.9% of trusts performed below 75%.
-- **12-hour Decision-to-Admit waits rose 43-fold** — from 12,435 in 2019-20 to 532,451 in 2024-25. This metric isolates the back-door cause: patients waiting in A&E for a ward bed after clinical assessment is complete.
-- **Seasonal patterns have changed.** The summer–winter performance gap narrowed from 7.8 to 2.6 percentage points — not because winters improved, but because summer performance collapsed to near-winter levels. The crisis is now year-round.
-- **The local trust (RGN — North West Anglia / Hinchingbrooke, Huntingdon) sits at the 50th national percentile**, averaging 58.8% in 2024-25. Being average now means failing the target by 36 percentage points.
+- **12-hour Decision-to-Admit waits rose 43-fold** (from 12,435 in 2019-20 to 532,451 in 2024-25). This metric isolates the back-door cause: patients waiting in A&E for a ward bed after clinical assessment is complete.
+- **Seasonal patterns have changed.** The summer–winter performance gap narrowed from 7.8 to 2.6 percentage points. Not because winters improved, but because summer performance collapsed to near-winter levels. The crisis is now year-round.
+- **The local trust (RGN, North West Anglia / Hinchingbrooke, Huntingdon) sits at the 50th national percentile**, averaging 58.8% in 2024-25. Being average now means failing the target by 36 percentage points.
 
 ---
 
@@ -44,7 +44,7 @@ The seasonal picture has shifted too. The traditional winter spike still exists,
 
 **[View the dashboard](https://nhs-waiting-time-analysis-ftffjzfb52xgeqyn2mgc5d.streamlit.app/)**
 
-No installation needed — open the link and explore the data directly in your browser.
+No installation needed. Open the link and explore the data directly in your browser.
 
 Five pages: About & Key Findings, National Overview, Trust Performance, Seasonal Patterns, Local Focus (Hinchingbrooke / North West Anglia NHS Trust).
 
@@ -118,7 +118,7 @@ streamlit run app.py
 | 04 | `04_eda_trust_level.ipynb` | Trust-level performance distribution, league table, regional heatmap, local trust analysis |
 | 05 | `05_seasonal_analysis.ipynb` | Monthly attendance and performance profiles, winter vs summer gap, year-on-year overlay |
 | 06 | `06_sql_exploration.ipynb` | SQLite database; 6 queries using LAG, RANK, CTEs, CASE WHEN, correlated subqueries |
-| 07 | `07_dashboard_prep.ipynb` | Enriched CSVs for Looker Studio — derived columns, performance bands, quarter start dates |
+| 07 | `07_dashboard_prep.ipynb` | Enriched CSVs for the Streamlit dashboard: derived columns, performance bands, quarter start dates |
 | 08 | `08_plotly_charts.ipynb` | Five interactive HTML charts (Plotly) — national trend, seasonal profile, regional box plot, volume scatter, band distribution |
 
 ---
