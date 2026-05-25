@@ -22,8 +22,8 @@ The seasonal picture has shifted too. The traditional winter spike still exists,
 - **The worst single year was 2021-22: −15.3 percentage points** on Type 1 performance, as post-lockdown attendance rebounded faster than NHS capacity could respond.
 - **In 2024-25, not one Type 1 trust in England met the 95% target.** 95.9% of trusts performed below 75%.
 - **12-hour Decision-to-Admit waits rose 43-fold** (from 12,435 in 2019-20 to 532,451 in 2024-25). This metric isolates the back-door cause: patients waiting in A&E for a ward bed after clinical assessment is complete.
-- **Seasonal patterns have changed.** The summer–winter performance gap narrowed from 7.8 to 4.3 percentage points. Not because winters improved, but because summer performance collapsed to near-winter levels. The crisis is now year-round.
-- **The local trust (RGN, North West Anglia / Hinchingbrooke, Huntingdon) sits at the 50th national percentile**, averaging 58.8% in 2024-25. Being average now means failing the target by 36 percentage points.
+- **Seasonal patterns have changed.** The summer–winter performance gap narrowed from 7.7 to 4.3 percentage points. Not because winters improved, but because summer performance collapsed to near-winter levels. The crisis is now year-round.
+- **The local trust (RGN, North West Anglia / Hinchingbrooke, Huntingdon) sits at the 49th national percentile**, averaging 58.8% in 2024-25. Being average now means failing the target by 36 percentage points.
 
 ---
 

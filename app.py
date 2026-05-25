@@ -16,9 +16,10 @@ def load_data():
     national = pd.read_csv("data/processed/dashboard_national.csv", parse_dates=["period"])
     trust = pd.read_csv("data/processed/dashboard_trust.csv", parse_dates=["quarter_start_date"])
     trust["region_short"] = trust["region_short"].str.strip()
-    return national, trust
+    locations = pd.read_csv("data/processed/trust_locations.csv")
+    return national, trust, locations
 
-national, trust = load_data()
+national, trust, trust_locations = load_data()
 
 st.sidebar.title("NHS A&E Dashboard")
 page = st.sidebar.radio(
@@ -36,121 +37,143 @@ st.sidebar.markdown(
 
 if page == "About & Key Findings":
     st.title("NHS A&E Waiting Times — England 2019 to 2025")
-    st.markdown(
-        """
-        This dashboard looks at six years of NHS A&E performance data, from the pre-pandemic
-        baseline in 2019-20, through COVID, to today. The main metric throughout
-        is the **4-hour standard**: the NHS target that 95% of patients attending a major A&E should be seen,
-        treated, and either admitted or discharged within four hours of arrival.
 
-        It covers **England's ~136 Type 1 (major) A&E departments**, using NHS England's
-        monthly national time series and quarterly trust-level returns. I downloaded the raw files,
-        cleaned and processed them in Python, and built this dashboard from the results.
-
-        Use the sidebar to navigate. Each page looks at a different angle of the same story.
-        """
+    _yr2024 = national[national["financial_year"] == "2024-25"]
+    _yr1920 = national[national["financial_year"] == "2019-20"]
+    _val_2019 = _yr1920["dtoa_over_12hr"].sum()
+    _val_2024 = _yr2024["dtoa_over_12hr"].sum()
+    _trusts_2024 = trust[trust["financial_year"] == "2024-25"]
+    _trusts_2024_perfs = _trusts_2024.groupby("code")["pct_4hr_type1_pct"].mean().dropna()
+    _at_target = int((_trusts_2024_perfs >= 95).sum())
+    _total_trusts = int(len(_trusts_2024_perfs))
+    _avg_perf = _yr2024["pct_4hr_type1_pct"].mean()
+    _gap_2425_h = (
+        _yr2024[_yr2024["season"] == "Summer"]["pct_4hr_type1_pct"].mean()
+        - _yr2024[_yr2024["season"] == "Winter"]["pct_4hr_type1_pct"].mean()
     )
+    _gap_1920_h = (
+        _yr1920[_yr1920["season"] == "Summer"]["pct_4hr_type1_pct"].mean()
+        - _yr1920[_yr1920["season"] == "Winter"]["pct_4hr_type1_pct"].mean()
+    )
+
+    h1, h2, h3, h4 = st.columns(4)
+    h1.metric(
+        "2024-25 Type 1 Performance", f"{_avg_perf:.1f}%",
+        delta=f"{_avg_perf - 95:.1f}pp vs 95% target", delta_color="normal"
+    )
+    h2.metric(
+        "12-hr Trolley Waits Rise", f"{_val_2024 / _val_2019:.0f}x",
+        delta=f"{_val_2019:,.0f} → {_val_2024:,.0f} patients/yr", delta_color="normal"
+    )
+    h3.metric(
+        "Trusts at 95% Target (2024-25)", f"{_at_target} / {_total_trusts}",
+        delta_color="normal"
+    )
+    h4.metric(
+        "Seasonal Gap (2024-25)", f"{_gap_2425_h:.1f}pp",
+        delta=f"{_gap_2425_h - _gap_1920_h:+.1f}pp since 2019-20 (was {_gap_1920_h:.1f}pp)", delta_color="normal"
+    )
+
+    st.markdown("---")
+
+    _bar_html = (
+        f'<div style="margin:4px 0 16px 0;">'
+        f'<p style="margin:0 0 6px 0; font-size:13px; color:#555; font-weight:600;">Four-hour performance vs 95% target (2024-25)</p>'
+        f'<div style="background:#eee; border-radius:4px; height:28px; position:relative;">'
+        f'<div style="background:#d73027; width:{_avg_perf:.1f}%; height:100%; border-radius:4px 0 0 4px; display:flex; align-items:center; padding-left:10px;">'
+        f'<span style="color:white; font-weight:bold; font-size:13px;">{_avg_perf:.1f}%</span>'
+        f'</div>'
+        f'<div style="position:absolute; top:-4px; left:95%; width:2px; height:36px; background:#1a9850;"></div>'
+        f'<span style="position:absolute; top:6px; left:calc(95% + 5px); color:#1a9850; font-size:12px; font-weight:600;">95% target</span>'
+        f'</div>'
+        f'<p style="margin:5px 0 0 0; font-size:12px; color:#888;">{95 - _avg_perf:.1f}pp short of target</p>'
+        f'</div>'
+    )
+    _bar_col, _ = st.columns([3, 1])
+    with _bar_col:
+        st.markdown(_bar_html, unsafe_allow_html=True)
+
+    st.markdown("---")
+    st.caption("Six years of NHS A&E data — monthly national figures and quarterly trust-level returns for up to 135 NHS trusts with Type 1 A&E departments. Use the sidebar to explore each angle.")
 
     st.markdown("---")
     st.subheader("Five things the data shows")
 
-    col1, col2 = st.columns(2)
+    fc1, fc2, fc3, fc4, fc5 = st.columns(5)
+    with fc1:
+        st.metric("Trusts at 95% target", f"0 / {_total_trusts}")
+        st.caption("Not one major A&E met the standard in 2024-25. 96% performed below 75%.")
+    with fc2:
+        st.metric("Attendance rise since 2019", "+6%")
+        st.caption("Demand nearly recovered. Performance fell by 16 percentage points.")
+    with fc3:
+        st.metric("12-hr trolley waits", "43x")
+        st.caption(f"Patients assessed by a doctor but still waiting in A&E for a hospital bed. {_val_2019:,.0f} in 2019-20 → {_val_2024:,.0f} in 2024-25.")
+    with fc4:
+        st.metric("Worst single-year drop", "−15pp")
+        st.caption("2021-22: post-lockdown demand rebounded faster than capacity could respond.")
+    with fc5:
+        st.metric("Seasonal gap (2024-25)", "4.3pp")
+        st.caption("Down from 7.7pp — not because winters improved.")
 
-    with col1:
-        st.error(
-            "**1. Not one trust met the 95% target in 2024-25**\n\n"
-            "In the financial year 2024-25, no Type 1 A&E department in England achieved the 95% standard "
-            "for a full year. 96% of trusts performed below 75%, the threshold that triggers formal concern. "
-            "This isn't a few struggling hospitals dragging down an otherwise healthy system. "
-            "The whole distribution has shifted."
-        )
-        st.warning(
-            "**2. Demand recovered. Performance didn't.**\n\n"
-            "Type 1 attendances are only 6% above pre-pandemic levels by 2024-25. "
-            "The 4-hour performance rate has fallen from 75% to 59% over the same period. "
-            "Rising patient numbers alone don't explain the collapse. Something else changed."
-        )
-        st.error(
-            "**3. 12-hour trolley waits rose 43-fold**\n\n"
-            "In 2019-20, 12,435 patients waited more than 12 hours in A&E after a doctor had already "
-            "decided they needed to be admitted to a ward. By 2024-25 that figure was 532,451. "
-            "These patients weren't waiting to be seen. They were waiting for a bed. "
-            "The bottleneck is the back door, not the front."
-        )
-
-    with col2:
-        st.warning(
-            "**4. The worst year was 2021-22**\n\n"
-            "Performance dropped 15.3 percentage points in a single year as post-lockdown attendance "
-            "rebounded faster than NHS capacity could respond. The system has never recovered to "
-            "its pre-pandemic level. Each subsequent year has seen only marginal improvement."
-        )
-        st.info(
-            "**5. The seasonal crisis is now year-round**\n\n"
-            "A&E has always been harder in winter. But the summer–winter performance gap has "
-            "narrowed from 7.8 percentage points to 4.3, and not because winters got better. "
-            "Summer performance collapsed to near-winter levels. "
-            "The system is under pressure every month of the year now."
-        )
+    _about_map_data = (
+        trust[trust["financial_year"] == "2024-25"]
+        .groupby(["code", "name"])
+        .agg(perf=("pct_4hr_type1_pct", "mean"), attendances=("type1_attendances", "sum"))
+        .reset_index().dropna(subset=["perf"])
+        .merge(trust_locations, on="code", how="inner")
+    )
+    fig_about_map = px.scatter_mapbox(
+        _about_map_data,
+        lat="lat", lon="lon",
+        color="perf",
+        size="attendances",
+        size_max=22,
+        hover_name="name",
+        hover_data={"perf": ":.1f", "attendances": ":,.0f", "lat": False, "lon": False},
+        labels={"perf": "% seen ≤4hrs", "attendances": "Type 1 attendances"},
+        color_continuous_scale=[[0, "#d73027"], [0.45, "#fee08b"], [1, "#1a9850"]],
+        range_color=[50, 80],
+        mapbox_style="carto-positron",
+        center={"lat": 52.6, "lon": -1.5},
+        zoom=5.2,
+        title="The performance collapse is nationwide — every dot is below the 95% target",
+        height=400
+    )
+    fig_about_map.update_layout(
+        margin={"r": 0, "t": 50, "l": 0, "b": 0},
+        coloraxis_colorbar=dict(title="% seen<br>within 4hrs", ticksuffix="%", len=0.7)
+    )
+    st.plotly_chart(fig_about_map, use_container_width=True)
+    st.caption("122 NHS trusts with major A&E departments. Bubble size = annual Type 1 attendances. Hover any bubble to explore. Each bubble represents a trust, not an individual hospital — some trusts run multiple sites, so the pin marks the trust's registered address.")
 
     st.markdown("---")
-    st.subheader("About the data")
-    st.markdown(
-        """
-        | Dataset | Coverage | Rows |
-        |---------|----------|------|
-        | National monthly time series | April 2019 – April 2026 | 85 months |
-        | Quarterly by-provider | 2019-20 Q1 – 2024-25 Q4 | 5,062 trust-quarters |
+    with st.expander("About the data"):
+        st.markdown(
+            """
+            | Dataset | Coverage | Rows |
+            |---------|----------|------|
+            | National monthly time series | April 2019 – April 2026 | 85 months |
+            | Quarterly by-provider | 2019-20 Q1 – 2024-25 Q4 | 5,062 trust-quarters |
 
-        **Type 1 only.** The 4-hour standard applies to major A&E departments (Type 1).
-        Type 2 (single-specialty units) and Type 3 (urgent treatment centres) are excluded because mixing them in
-        would make the performance numbers meaningless. A minor injuries unit isn't comparable to a full A&E.
+            **Type 1 only** — the 4-hour standard applies to major A&E departments. Type 2 and Type 3 are excluded.
 
-        **Percentages** are stored as decimals in the raw data (0.0–1.0) and converted here.
-
-        Source: [NHS England A&E Attendances and Emergency Admissions](https://www.england.nhs.uk/statistics/statistical-work-areas/ae-waiting-times-and-activity/)
-        """
-    )
-
-    st.markdown("---")
-    st.subheader("Further work")
-    st.markdown(
-        """
-        A few things I'd like to add if I pick this up again:
-
-        - **Workforce data.** NHS England publishes quarterly staffing figures by trust, covering headcount and
-          full-time equivalent broken down by staff group (nurses, doctors, support staff). Joining that
-          to the trust performance data on ODS code and quarter would let you test whether understaffing
-          is correlated with worse 4-hour performance. It's a separate download and a fair bit of extra
-          cleaning, but it'd make the analysis a lot more explanatory.
-
-        - **Delayed discharge data.** NHS England also publishes monthly delayed transfer of care figures.
-          Linking those to the 12-hour trolley wait trend would help quantify how much of the back-door
-          problem is driven by social care delays specifically, which is directly relevant for a local
-          authority audience.
-
-        - **Longer time horizon.** The A&E time series goes back to 2010. Including the pre-2019 data
-          would show the full decline from the last time the 95% target was consistently met (around 2014)
-          and give more context to the COVID impact.
-        """
-    )
+            Source: [NHS England A&E Attendances and Emergency Admissions](https://www.england.nhs.uk/statistics/statistical-work-areas/ae-waiting-times-and-activity/)
+            """
+        )
+    with st.expander("Further work"):
+        st.markdown(
+            """
+            - **Workforce data.** Quarterly staffing figures by trust (NHS England) — join on ODS code and quarter to test whether understaffing correlates with worse 4-hour performance.
+            - **Delayed discharge data.** Monthly delayed transfer of care figures — link to the 12-hour trolley wait trend to quantify how much of the back-door problem is driven by social care delays.
+            - **Longer time horizon.** The A&E time series goes back to 2010, including the last period when the 95% target was consistently met (around 2014).
+            """
+        )
 
 
 elif page == "National Overview":
     st.title("National Overview")
-
-    st.markdown(
-        """
-        This page asks the most basic question: **what happened to NHS A&E performance over the last six years,
-        and why?**
-
-        The short answer is that attendances recovered to near pre-pandemic levels by 2021-22, but performance
-        kept falling. That gap makes it hard to blame rising demand. Something else changed. The third chart
-        below (12-hour Decision-to-Admit waits) points to what's actually driving it: patients stuck in A&E
-        waiting for a hospital bed after they've already been assessed and told they need one. That's a
-        capacity and discharge problem, not really an A&E problem.
-        """
-    )
+    st.caption("Attendances recovered to near pre-pandemic levels by 2021-22. Performance kept falling — pointing to a capacity and discharge problem, not a demand problem.")
 
     era_options = ["All"] + sorted(national["era"].dropna().unique().tolist())
     era_filter = st.selectbox("Filter by era", era_options)
@@ -159,7 +182,6 @@ elif page == "National Overview":
     if era_filter != "All":
         nat = nat[nat["era"] == era_filter]
 
-    # Scorecards
     latest = national.sort_values("period").iloc[-1]
     prev = national.sort_values("period").iloc[-2]
     yr_2024 = national[national["financial_year"] == "2024-25"]
@@ -179,17 +201,16 @@ elif page == "National Overview":
         "2024-25 Avg Performance",
         f"{yr_2024['pct_4hr_type1_pct'].mean():.1f}%",
         delta=f"{yr_2024['pct_4hr_type1_pct'].mean() - 95:.1f}pp vs 95% target",
-        delta_color="inverse"
+        delta_color="normal"
     )
     col4.metric(
         "Months at 95% Target (2024-25)",
         f"{int(yr_2024['at_target'].sum())} / 12",
-        delta_color="off"
+        delta_color="normal"
     )
 
     st.markdown("---")
 
-    # Attendances line chart
     fig1 = go.Figure()
     fig1.add_trace(go.Scatter(
         x=nat["period"], y=nat["type1_attendances"],
@@ -208,18 +229,20 @@ elif page == "National Overview":
         xaxis_title="", yaxis_title="Attendances"
     )
     fig1.update_yaxes(showgrid=True, gridcolor="#e0e0e0")
-    fig1.update_xaxes(showgrid=False)
-    st.plotly_chart(fig1, use_container_width=True)
-    st.caption(
-        "Attendances dropped roughly 50% in April 2020 as people stayed away during the first lockdown. "
-        "They came back to pre-pandemic levels by 2021-22 and have kept rising since. "
-        "By 2024-25, Type 1 attendance is about 6% above the 2019-20 baseline. Not nothing, but nowhere "
-        "near enough to explain the performance collapse you'll see in the next chart."
+    fig1.update_xaxes(
+        showgrid=False,
+        rangeselector=dict(buttons=[
+            dict(count=1, label="1Y", step="year", stepmode="backward"),
+            dict(count=3, label="3Y", step="year", stepmode="backward"),
+            dict(step="all", label="All")
+        ]),
+        rangeslider=dict(visible=True, thickness=0.05)
     )
+    st.plotly_chart(fig1, use_container_width=True)
+    st.caption("Attendances are ~6% above the 2019-20 baseline — not enough to explain the performance collapse below.")
 
     st.markdown("---")
 
-    # Performance line chart
     fig2 = go.Figure()
     fig2.add_trace(go.Scatter(
         x=nat["period"], y=nat["pct_4hr_type1_pct"],
@@ -237,37 +260,26 @@ elif page == "National Overview":
         annotation_text="COVID-19", annotation_position="top left"
     )
     fig2.update_layout(
-        title="% of Type 1 Patients Seen Within 4 Hours — England",
+        title="Four-hour performance has fallen from 75% to 59% since 2019",
         plot_bgcolor="white", hovermode="x unified",
         xaxis_title="", yaxis_title="% seen within 4 hours",
         yaxis=dict(range=[50, 100], ticksuffix="%")
     )
     fig2.update_yaxes(showgrid=True, gridcolor="#e0e0e0")
-    fig2.update_xaxes(showgrid=False)
-    st.plotly_chart(fig2, use_container_width=True)
-    st.warning(
-        "Performance was already well below the 95% target before COVID. England hasn't consistently "
-        "hit it since around 2014. But the post-pandemic collapse is on a different scale. "
-        "The sharpest single drop was 2021-22: 15 percentage points in one year as attendance rebounded "
-        "faster than the system could cope. It hasn't recovered since."
+    fig2.update_xaxes(
+        showgrid=False,
+        rangeselector=dict(buttons=[
+            dict(count=1, label="1Y", step="year", stepmode="backward"),
+            dict(count=3, label="3Y", step="year", stepmode="backward"),
+            dict(step="all", label="All")
+        ]),
+        rangeslider=dict(visible=True, thickness=0.05)
     )
+    st.plotly_chart(fig2, use_container_width=True)
+    st.caption("The sharpest drop was 2021-22 (−15pp in one year). England hasn't consistently hit the 95% target since around 2014.")
 
     st.markdown("---")
 
-    # 12-hour trolley wait chart
-    st.markdown("#### 12-Hour Decision-to-Admit Waits")
-    st.markdown(
-        """
-        This metric measures something very specific: patients who've **already been assessed by a doctor
-        and told they need a hospital bed** but are still waiting in A&E more than 12 hours later because
-        no bed is free. The clinical work is done. The A&E has done its job. The wait is happening
-        because the rest of the hospital can't take them.
-
-        This is often called the **back-door problem**: patients who can't be discharged from wards
-        (often because social care arrangements aren't in place) block beds, which blocks admissions from A&E,
-        which blocks new patients coming through the front door. It's a chain reaction that starts outside A&E.
-        """
-    )
     fig_trolley = go.Figure()
     fig_trolley.add_trace(go.Scatter(
         x=nat["period"], y=nat["dtoa_over_12hr"],
@@ -282,41 +294,33 @@ elif page == "National Overview":
         annotation_text="COVID-19", annotation_position="top left"
     )
     fig_trolley.update_layout(
-        title="Monthly Patients Waiting 12+ Hours After Decision to Admit — England",
+        title="12-hour admitted waits have risen 43x — these patients were waiting for a bed, not to be seen",
         plot_bgcolor="white", hovermode="x unified",
         xaxis_title="", yaxis_title="Patients per month"
     )
     fig_trolley.update_yaxes(showgrid=True, gridcolor="#e0e0e0")
-    fig_trolley.update_xaxes(showgrid=False)
+    fig_trolley.update_xaxes(
+        showgrid=False,
+        rangeselector=dict(buttons=[
+            dict(count=1, label="1Y", step="year", stepmode="backward"),
+            dict(count=3, label="3Y", step="year", stepmode="backward"),
+            dict(step="all", label="All")
+        ]),
+        rangeslider=dict(visible=True, thickness=0.05)
+    )
     st.plotly_chart(fig_trolley, use_container_width=True)
 
     val_2019 = national[national["financial_year"] == "2019-20"]["dtoa_over_12hr"].sum()
     val_2024 = national[national["financial_year"] == "2024-25"]["dtoa_over_12hr"].sum()
-    st.error(
-        f"**{val_2019:,.0f}** patients waited 12+ hours after a decision to admit in 2019-20.  \n"
-        f"**{val_2024:,.0f}** in 2024-25.  \n"
-        f"That's a **{val_2024/val_2019:.0f}x increase** in six years, which works out at roughly "
-        f"**{val_2024/365:,.0f} patients every single day**. "
-        "This is the single most important number in the dataset: it isolates the cause of the crisis "
-        "in the part of the system beyond A&E itself."
+    st.caption(
+        f"{val_2019:,.0f} patients in 2019-20 → {val_2024:,.0f} in 2024-25 "
+        f"({val_2024/val_2019:.0f}x increase) — roughly {val_2024/365:,.0f} patients every day."
     )
 
 
 elif page == "Trust Performance":
     st.title("Trust Performance")
-
-    st.markdown(
-        """
-        The national average hides a lot. This page breaks things down to individual trust level,
-        roughly 136 major A&E departments across England.
-
-        The main questions: **how spread out is performance, and is the whole distribution shifting or
-        just a few outliers pulling the average down?** The league table shows the worst performers in
-        a given year. The scatter tests whether bigger, busier trusts are systematically worse
-        (short answer: not really, volume doesn't predict performance cleanly).
-        The stacked bar at the bottom shows how the whole distribution has moved over six years.
-        """
-    )
+    st.caption("The national average hides a lot — this page breaks performance down to individual trust level.")
 
     col1, col2, col3 = st.columns(3)
     fy_options = sorted(trust["financial_year"].unique().tolist(), reverse=True)
@@ -329,15 +333,83 @@ elif page == "Trust Performance":
     band_options = ["All"] + band_order
     selected_band = col3.selectbox("Performance Band", band_options)
 
+    search = st.text_input("Search trust name", placeholder="e.g. Cambridge, Portsmouth, Royal Free...")
+
     t = trust[trust["financial_year"] == selected_fy].copy()
     if selected_region != "All":
         t = t[t["region_short"] == selected_region]
     if selected_band != "All":
         t = t[t["performance_band"] == selected_band]
+    if search:
+        t = t[t["name"].str.contains(search, case=False, na=False)]
 
     st.markdown("---")
 
-    # league table, bottom 30
+    _t_by_code = t.groupby("code")["pct_4hr_type1_pct"].mean().dropna()
+    _t_total_codes = len(_t_by_code)
+    if _t_total_codes > 0:
+        _t_at_tgt = int((_t_by_code >= 95).sum())
+        _t_severe = int((_t_by_code < 75).sum())
+        sm1, sm2, sm3 = st.columns(3)
+        sm1.metric("Trusts at 95% Target", f"{_t_at_tgt} / {_t_total_codes}")
+        sm2.metric(
+            "Trusts Below 75% (Severe)", f"{_t_severe} / {_t_total_codes}",
+            delta=f"{_t_severe / _t_total_codes * 100:.0f}% of trusts shown", delta_color="normal"
+        )
+        sm3.metric(
+            "Average Performance", f"{_t_by_code.mean():.1f}%",
+            delta=f"{_t_by_code.mean() - 95:.1f}pp vs target", delta_color="normal"
+        )
+        st.markdown("---")
+
+    _map_data = (
+        trust[trust["financial_year"] == selected_fy]
+        .groupby(["code", "name", "region_short"])
+        .agg(
+            perf=("pct_4hr_type1_pct", "mean"),
+            attendances=("type1_attendances", "sum")
+        )
+        .reset_index()
+        .dropna(subset=["perf"])
+        .merge(trust_locations, on="code", how="inner")
+    )
+    _map_best_row = _map_data.loc[_map_data["perf"].idxmax()]
+
+    fig_map = px.scatter_mapbox(
+        _map_data,
+        lat="lat", lon="lon",
+        color="perf",
+        size="attendances",
+        size_max=28,
+        hover_name="name",
+        hover_data={
+            "perf": ":.1f",
+            "attendances": ":,.0f",
+            "region_short": True,
+            "lat": False, "lon": False
+        },
+        labels={"perf": "% seen ≤4hrs", "attendances": "Type 1 attendances", "region_short": "Region"},
+        color_continuous_scale=[[0, "#d73027"], [0.45, "#fee08b"], [1, "#1a9850"]],
+        range_color=[50, 80],
+        mapbox_style="carto-positron",
+        center={"lat": 52.6, "lon": -1.5},
+        zoom=5.2,
+        title=f"Every trust is failing the 95% target — best performer: {_map_best_row['name']} at {_map_best_row['perf']:.1f}%",
+        height=520
+    )
+    fig_map.update_layout(
+        margin={"r": 0, "t": 50, "l": 0, "b": 0},
+        coloraxis_colorbar=dict(
+            title="% seen<br>within 4hrs",
+            ticksuffix="%",
+            len=0.75
+        )
+    )
+    st.plotly_chart(fig_map, use_container_width=True)
+    st.caption("Bubble size = annual Type 1 attendances. Colour = average 4-hour performance. Hover for trust detail. Each bubble is a trust, not an individual hospital — some trusts run multiple sites, so the pin marks the trust's registered address.")
+
+    st.markdown("---")
+
     league = (
         t.groupby(["code", "name"])["pct_4hr_type1_pct"]
         .mean().reset_index().dropna()
@@ -361,16 +433,11 @@ elif page == "Trust Performance":
     fig3.update_xaxes(showgrid=True, gridcolor="#e0e0e0", ticksuffix="%")
     fig3.update_yaxes(showgrid=False)
     st.plotly_chart(fig3, use_container_width=True)
-    st.caption(
-        "Sorted worst-first. Hover over any bar to see the trust name and exact figure. "
-        "In 2024-25, the worst-performing trusts are seeing fewer than one in three patients "
-        "within the 4-hour standard. The target is 19 in 20."
-    )
+    st.caption("Sorted worst-first. Hover for exact figures.")
 
     st.markdown("---")
     col_left, col_right = st.columns(2)
 
-    # Scatter: volume vs performance
     trust_agg = (
         t.groupby(["code", "name", "region_short"])
         .agg(total_type1=("type1_attendances", "sum"), avg_perf=("pct_4hr_type1_pct", "mean"))
@@ -379,7 +446,7 @@ elif page == "Trust Performance":
     fig4 = px.scatter(
         trust_agg, x="total_type1", y="avg_perf",
         color="region_short", hover_name="name",
-        title="Trust Volume vs Performance",
+        title="Volume does not predict performance",
         labels={
             "total_type1": "Type 1 attendances",
             "avg_perf": "Avg % seen within 4hrs",
@@ -391,13 +458,8 @@ elif page == "Trust Performance":
     fig4.update_xaxes(showgrid=True, gridcolor="#e0e0e0")
     fig4.update_yaxes(showgrid=True, gridcolor="#e0e0e0")
     col_left.plotly_chart(fig4, use_container_width=True)
-    col_left.caption(
-        "If volume were the main driver, you'd expect a clear downward slope with bigger trusts doing worse. "
-        "The scatter is all over the place, which suggests it's more complicated than just patient numbers. "
-        "Hover over any dot to see which trust it is."
-    )
+    col_left.caption("No clear pattern — busier trusts are not systematically worse. Hover to identify trusts.")
 
-    # Donut: performance band
     band_colors = {
         "1. >= 95% (target)": "#1a9850",
         "2. 85-94%": "#fee08b",
@@ -420,19 +482,10 @@ elif page == "Trust Performance":
         category_orders={"performance_band": band_order}
     )
     col_right.plotly_chart(fig5, use_container_width=True)
-    col_right.caption(
-        "In 2019-20 roughly a third of trusts were meeting the 95% target. "
-        "By 2024-25 the green segment has disappeared entirely. "
-        "Change the year filter above to watch the distribution shift."
-    )
+    col_right.caption("Change the year filter to watch the green segment disappear.")
 
     st.markdown("---")
 
-    # performance band trend
-    st.markdown(
-        "The chart below shows how that distribution has shifted **across all six years**. "
-        "Each bar adds up to 100% of trusts. Watch the green (at target) shrink and the red (severe) grow."
-    )
     band_trend = (
         trust[trust["performance_band"].notna()]
         .groupby(["financial_year", "performance_band"])
@@ -447,7 +500,7 @@ elif page == "Trust Performance":
         band_trend,
         x="financial_year", y="pct",
         color="performance_band",
-        title="Share of NHS Trusts by Performance Band — 2019-20 to 2024-25",
+        title="The whole distribution shifted — not just a few bad trusts",
         labels={"pct": "% of trusts", "financial_year": "", "performance_band": ""},
         category_orders={"performance_band": band_order},
         color_discrete_map=band_colors,
@@ -463,30 +516,34 @@ elif page == "Trust Performance":
     fig_band.update_xaxes(showgrid=False)
     fig_band.update_yaxes(showgrid=True, gridcolor="#e0e0e0")
     st.plotly_chart(fig_band, use_container_width=True)
-    st.warning(
-        "This is what makes it clear it isn't just a handful of struggling trusts. "
-        "In 2019-20, roughly 30% of trusts were meeting the target. By 2024-25 that's zero. "
-        "The whole system shifted. It's structural, not a few bad apples."
-    )
+    st.caption("In 2019-20, a small handful of trust-quarters hit the 95% target. By 2024-25, none did.")
 
 
 elif page == "Seasonal Patterns":
     st.title("Seasonal Patterns")
+    st.caption("The seasonal gap is narrowing — not because winters improved, but because summers collapsed.")
 
-    st.markdown(
-        """
-        A&E has always been harder in winter, with more respiratory illness, more falls, and more frailty
-        episodes all arriving at once. A seasonal dip is expected and well-documented.
-
-        But the data shows something more troubling: **the summer recovery is disappearing**. The gap
-        between the best and worst months has narrowed from 7.8 percentage points to 4.3, and not because
-        winters got better. Summer performance collapsed towards winter levels.
-        The system is now under pressure year-round, not just in the cold months.
-
-        I've excluded the COVID year (2020-21) from the monthly average because suppressed attendances
-        during lockdown distort the seasonal pattern too much to be useful here.
-        """
+    _yr2425_s = national[national["financial_year"] == "2024-25"]
+    _best_2425 = _yr2425_s["pct_4hr_type1_pct"].max()
+    _worst_2425 = _yr2425_s["pct_4hr_type1_pct"].min()
+    _gap_2425 = (
+        _yr2425_s[_yr2425_s["season"] == "Summer"]["pct_4hr_type1_pct"].mean()
+        - _yr2425_s[_yr2425_s["season"] == "Winter"]["pct_4hr_type1_pct"].mean()
     )
+    _yr1920_s = national[national["financial_year"] == "2019-20"]
+    _gap_1920 = (
+        _yr1920_s[_yr1920_s["season"] == "Summer"]["pct_4hr_type1_pct"].mean()
+        - _yr1920_s[_yr1920_s["season"] == "Winter"]["pct_4hr_type1_pct"].mean()
+    )
+
+    sc1, sc2, sc3 = st.columns(3)
+    sc1.metric("Best month (2024-25)", f"{_best_2425:.1f}%")
+    sc2.metric("Worst month (2024-25)", f"{_worst_2425:.1f}%")
+    sc3.metric(
+        "Seasonal gap", f"{_gap_2425:.1f}pp",
+        delta=f"{_gap_2425 - _gap_1920:+.1f}pp since 2019-20 (was {_gap_1920:.1f}pp)", delta_color="normal"
+    )
+    st.markdown("---")
 
     col_a, col_b = st.columns(2)
     fy_options = sorted(national["financial_year"].unique().tolist())
@@ -499,7 +556,6 @@ elif page == "Seasonal Patterns":
 
     st.markdown("---")
 
-    # Monthly average bar
     month_order = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
     non_covid = national[national["financial_year"] != "2020-21"]
@@ -531,21 +587,16 @@ elif page == "Seasonal Patterns":
     fig6.update_xaxes(showgrid=False)
     fig6.update_yaxes(showgrid=True, gridcolor="#e0e0e0")
     st.plotly_chart(fig6, use_container_width=True)
-    st.caption(
-        "Winter months (Dec to Feb) consistently show the lowest performance, with more patients, "
-        "sicker patients, and more admissions needed. But even the best summer months are nowhere near "
-        "the 95% target. The seasonal dip explains some of the variation, but not the overall level."
-    )
+    st.caption("Even the best summer months are far below the 95% target.")
 
     st.markdown("---")
 
-    # Year-on-year line
     if selected_years:
         yoy = national[national["financial_year"].isin(selected_years)]
         fig7 = px.line(
             yoy, x="fy_month_pos", y="pct_4hr_type1_pct",
             color="financial_year",
-            title="Monthly Performance by Financial Year (Apr → Mar)",
+            title="Each year since 2019-20 has performed lower than the last",
             labels={
                 "pct_4hr_type1_pct": "% seen within 4hrs",
                 "fy_month_pos": "Month in financial year",
@@ -568,34 +619,12 @@ elif page == "Seasonal Patterns":
         )
         fig7.update_yaxes(showgrid=True, gridcolor="#e0e0e0")
         st.plotly_chart(fig7, use_container_width=True)
-        st.caption(
-            "Each line is one financial year (April to March). The 2019-20 line sits at the top, "
-            "that's the pre-pandemic baseline. Each year after sits lower. "
-            "Use the multiselect above to isolate specific years for comparison. "
-            "Try comparing 2019-20 against 2024-25 to see the full extent of the shift."
-        )
+        st.caption("Try isolating 2019-20 vs 2024-25 to see the full shift.")
 
 
 elif page == "Local Focus":
     st.title("Local Focus — North West Anglia NHS FT")
-
-    st.markdown(
-        """
-        North West Anglia NHS Foundation Trust runs **Hinchingbrooke Hospital** in Huntingdon,
-        Cambridgeshire, the main acute hospital for much of Huntingdonshire. Its ODS code is **RGN**.
-
-        This page asks: how does the local trust compare to the national picture and its East of England
-        peers? Being near the national average might sound fine, but in 2024-25 the national average is
-        59%, which is 36 percentage points below the target. Average now means failing by a long way.
-
-        There's also a direct connection to local authority work worth flagging.
-        Delayed hospital discharges (patients ready to leave a ward but waiting on social care
-        arrangements) are one of the main drivers of the back-door bottleneck. Adult social care
-        in Huntingdonshire is commissioned by Cambridgeshire County Council in partnership with
-        district councils. How quickly home care can be arranged locally feeds directly into
-        Hinchingbrooke's A&E performance numbers.
-        """
-    )
+    st.caption("Hinchingbrooke Hospital (RGN) serves Huntingdon and much of Huntingdonshire. Being near the national average means failing the target by 36 percentage points.")
 
     rgn = trust[trust["code"] == "RGN"].copy()
     nat_quarterly = (
@@ -612,16 +641,34 @@ elif page == "Local Focus":
     col2.metric("National Avg 2024-25", f"{nat_2024:.1f}%")
     col3.metric("Gap vs National", f"{rgn_2024 - nat_2024:+.1f}pp")
 
-    st.info(
-        f"RGN sits close to the national median, roughly the 50th percentile among Type 1 trusts. "
-        f"That means it's neither an outlier nor a star performer. "
-        f"At {rgn_2024:.1f}%, it's {95 - rgn_2024:.1f} percentage points below the 95% target. "
-        "Being average in 2024-25 means failing the standard by more than a third."
+    _trust_perfs_2024 = (
+        trust[trust["financial_year"] == "2024-25"]
+        .groupby("code")["pct_4hr_type1_pct"].mean().dropna().sort_values()
     )
+    _rank = int((_trust_perfs_2024 < rgn_2024).sum())
+    _total_ranked = len(_trust_perfs_2024)
+    _percentile = _rank / _total_ranked * 100
+
+    _pct_html = (
+        f'<div style="margin:12px 0 8px 0;">'
+        f'<p style="margin:0 0 4px 0; font-size:13px; font-weight:600; color:#555;">RGN\'s position among all Type 1 trusts (2024-25)</p>'
+        f'<div style="display:flex; justify-content:space-between; font-size:11px; color:#aaa; margin-bottom:3px;">'
+        f'<span>← Worst performing</span><span>Best performing →</span>'
+        f'</div>'
+        f'<div style="background:#eee; border-radius:4px; height:20px; position:relative;">'
+        f'<div style="position:absolute; top:-3px; left:{_percentile:.0f}%; width:3px; height:26px; background:#005EB8; border-radius:2px;"></div>'
+        f'</div>'
+        f'<p style="margin:5px 0 0 0; font-size:12px; color:#555;">'
+        f'<b style="color:#005EB8;">RGN: {_percentile:.0f}th percentile</b> — better than {_rank} of {_total_ranked} trusts'
+        f'</p>'
+        f'</div>'
+    )
+    _pct_col, _ = st.columns([3, 1])
+    with _pct_col:
+        st.markdown(_pct_html, unsafe_allow_html=True)
 
     st.markdown("---")
 
-    # RGN vs national trend
     fig8 = go.Figure()
     fig8.add_trace(go.Scatter(
         x=rgn["quarter_start_date"], y=rgn["pct_4hr_type1_pct"],
@@ -640,28 +687,16 @@ elif page == "Local Focus":
         annotation_text="95% target", annotation_font_color="#1a9850"
     )
     fig8.update_layout(
-        title="Hinchingbrooke Type 1 Performance vs National Average (2019–2025)",
+        title="RGN tracks the national average closely — this is a system-wide problem, not a local one",
         plot_bgcolor="white", hovermode="x unified",
         yaxis=dict(ticksuffix="%"), xaxis_title=""
     )
     fig8.update_yaxes(showgrid=True, gridcolor="#e0e0e0")
     fig8.update_xaxes(showgrid=False)
     st.plotly_chart(fig8, use_container_width=True)
-    st.caption(
-        "RGN has tracked pretty closely with the national average throughout, "
-        "falling at similar times and by similar amounts. There's no point where the local trust "
-        "bucked the national trend for any sustained period. That tells you this is a system-wide problem "
-        "showing up locally, not something specific to Hinchingbrooke."
-    )
 
     st.markdown("---")
 
-    # East of England peers
-    st.markdown("#### East of England peer comparison (2024-25)")
-    st.markdown(
-        "How does Hinchingbrooke sit among the other major A&E trusts in its NHS England region? "
-        "RGN is highlighted in dark blue. Sorted worst-first."
-    )
     eoe = (
         trust[
             trust["region_short"].str.contains("East Of England", na=False) &
@@ -674,7 +709,7 @@ elif page == "Local Focus":
     fig9 = px.bar(
         eoe, x="pct_4hr_type1_pct", y="name",
         orientation="h",
-        title="East of England Trusts — Type 1 Performance 2024-25",
+        title="East of England — RGN sits mid-pack (2024-25)",
         labels={"pct_4hr_type1_pct": "Avg % seen within 4hrs", "name": ""},
         color="is_local_trust",
         color_discrete_map={1: "#005EB8", 0: "#aec7e8"}
@@ -687,8 +722,52 @@ elif page == "Local Focus":
     fig9.update_xaxes(showgrid=True, gridcolor="#e0e0e0")
     fig9.update_yaxes(showgrid=False)
     st.plotly_chart(fig9, use_container_width=True)
-    st.caption(
-        "No trust in the East of England region met the 95% target in 2024-25, which is consistent with "
-        "the national picture. RGN sits in the middle of the regional pack. "
-        "The variation within the region shows that local factors do matter, even within a system-wide crisis."
+    st.caption("No trust in the East of England met the 95% target in 2024-25.")
+
+    st.markdown("---")
+
+    _eoe_map = (
+        trust[
+            trust["region_short"].str.contains("East Of England", na=False) &
+            (trust["financial_year"] == "2024-25")
+        ]
+        .groupby(["code", "name"])
+        .agg(perf=("pct_4hr_type1_pct", "mean"), attendances=("type1_attendances", "sum"))
+        .reset_index().dropna(subset=["perf"])
+        .merge(trust_locations, on="code", how="inner")
     )
+    _rgn_row = _eoe_map[_eoe_map["code"] == "RGN"].iloc[0]
+
+    fig_local_map = px.scatter_mapbox(
+        _eoe_map,
+        lat="lat", lon="lon",
+        color="perf",
+        size="attendances",
+        size_max=24,
+        hover_name="name",
+        hover_data={"perf": ":.1f", "attendances": ":,.0f", "lat": False, "lon": False},
+        labels={"perf": "% seen ≤4hrs", "attendances": "Type 1 attendances"},
+        color_continuous_scale=[[0, "#d73027"], [0.45, "#fee08b"], [1, "#1a9850"]],
+        range_color=[50, 80],
+        mapbox_style="carto-positron",
+        center={"lat": 52.3, "lon": 0.3},
+        zoom=6.8,
+        height=460
+    )
+    fig_local_map.add_trace(go.Scattermapbox(
+        lat=[_rgn_row["lat"]], lon=[_rgn_row["lon"]],
+        mode="markers+text",
+        marker=dict(size=22, color="#005EB8"),
+        text=["Hinchingbrooke"],
+        textposition="top right",
+        customdata=[[_rgn_row["perf"], _rgn_row["attendances"]]],
+        hovertemplate="<b>North West Anglia NHS FT (RGN)</b><br>%{customdata[0]:.1f}% seen within 4hrs<br>%{customdata[1]:,.0f} attendances<extra></extra>",
+        showlegend=False
+    ))
+    fig_local_map.update_layout(
+        title="Hinchingbrooke sits mid-table in the East of England — mid-table means failing by 36pp",
+        margin={"r": 0, "t": 50, "l": 0, "b": 0},
+        coloraxis_colorbar=dict(title="% seen<br>within 4hrs", ticksuffix="%", len=0.75)
+    )
+    st.plotly_chart(fig_local_map, use_container_width=True)
+    st.caption("Blue = Hinchingbrooke (RGN). Other East of England trusts coloured red-to-green by 4-hour performance (2024-25). Each bubble is a trust — some trusts run multiple sites, so the pin marks the trust's registered address.")
